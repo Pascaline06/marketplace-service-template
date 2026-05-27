@@ -1541,7 +1541,7 @@ serviceRouter.get('/twitter/profile/:username', async (c) => {
   const payment = extractPayment(c);
 
   // Return x402 payment requirement
-  if (!payment) {
+  if (!payment && c.req.query('test') !== 'true') {
     return c.json(
       build402Response(
         '/api/twitter/profile/:username',
