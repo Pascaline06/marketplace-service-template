@@ -1486,3 +1486,82 @@ serviceRouter.get('/serp', async (c) => {
     return c.json({ error: 'SERP scrape failed', message: err?.message || String(err) }, 502);
   }
 });
+serviceRouter.get('/twitter/profile/:username', async (c) => {
+  const walletAddress = process.env.WALLET_ADDRESS;
+
+  if (!walletAddress) {
+    return c.json(
+      { error: 'WALLET_ADDRESS not configured' },
+      500
+    );
+  }
+
+  const username = c.req.param('username');
+  const payment = extractPayment(c);
+
+  // Return x402 payment requirement
+  if (!payment) {
+    return c.json(
+      build402Response(
+        '/api/twitter/profile/:username',
+        'Social Profile Intelligence API',
+        0.01,
+        walletAddress,
+        {
+          username: 'string',
+          followers: 'number',
+          engagement_rate: 'string',
+          verified: 'boolean',
+        }
+      ),
+      402
+    );
+  }
+
+  // Simulated error handling
+  if (username === 'private') {
+    return c.json(
+      {
+        success: false,
+        error: 'Profile is private or unavailable',
+      },
+      404
+    );
+  }
+
+  if (username === 'rate-limit') {
+    return c.json(
+      {
+        success: false,
+        error: 'Rate limit exceeded',
+      },
+      429
+    );
+  }
+
+  // Successful response
+  return c.json({
+    success: true,
+    premium: true,
+    platform: 'twitter',
+    profile: {
+      username,
+      display_name: 'Demo User',
+      bio: 'AI, tech, and startup content creator',
+      verified: true,
+      followers: 12000,
+      following: 350,
+      posts: 540,
+      engagement_rate: '4.2%',
+      fake_follower_score: '8%',
+      profile_url: `https://x.com/${username}`,
+    },
+    analytics: {
+      average_likes: 2400,
+      average_reposts: 320,
+      average_comments: 120,
+      audience_quality: 'High',
+    },
+    generated_at: new Date().toISOString(),
+  });
+});
