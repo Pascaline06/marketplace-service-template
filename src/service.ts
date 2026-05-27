@@ -1490,11 +1490,52 @@ serviceRouter.get('/twitter/profile/:username', async (c) => {
   const walletAddress = process.env.WALLET_ADDRESS;
 
   if (!walletAddress) {
-    return c.json(
-      { error: 'WALLET_ADDRESS not configured' },
-      500
-    );
-  }
+    try {
+  const profileUrl = `https://x.com/${username}`;
+
+  const response = await proxyFetch(profileUrl, {
+    headers: {
+      'User-Agent':
+        'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/120 Safari/537.36',
+    },
+  });
+
+  const html = await response.text();
+
+  const bioMatch = html.match(/"description":"(.*?)"/);
+  const imageMatch = html.match(/"profile_image_url_https":"(.*?)"/);
+  const verifiedMatch = html.includes('"is_blue_verified":true');
+
+  return c.json({
+    success: true,
+    premium: true,
+    platform: 'twitter',
+    profile: {
+      username,
+      bio: bioMatch ? bioMatch[1] : null,
+      verified: verifiedMatch,
+      profile_image: imageMatch
+        ? imageMatch[1].replace(/\\\\u002F/g, '/')
+        : null,
+      profile_url: profileUrl,
+    },
+    proxy: {
+      provider: 'Proxies.sx',
+      type: 'mobile',
+    },
+    generated_at: new Date().toISOString(),
+  });
+} catch (error: any) {
+  return c.json(
+    {
+      success: false,
+      error: 'Failed to fetch live Twitter profile',
+      details: error.message,
+    },
+    500
+  );
+    }
+
 
   const username = c.req.param('username');
   const payment = extractPayment(c);
